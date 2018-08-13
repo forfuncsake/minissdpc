@@ -7,12 +7,10 @@ import (
 	"io"
 )
 
-const (
-	// MaxLengthBytes determines the maximum number of bytes that can be used
-	// to encode the length. The default value of 5 theoretically allows a max
-	// length of 34359738367 (which overflows a 32bit int anyway)
-	MaxLengthBytes = 5
-)
+// MaxLengthBytes determines the maximum number of bytes that can be used
+// to encode the length. The default value of 5 theoretically allows a max
+// length of 34359738367 (which overflows a 32bit int anyway)
+const MaxLengthBytes = 5
 
 // Request Types as defined by minissdpd
 const (
