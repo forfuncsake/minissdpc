@@ -3,98 +3,11 @@ package minissdpd
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"reflect"
+	"strings"
 	"testing"
 )
-
-func EncodeLengthReverse(length int, w io.Writer) error {
-	if length < 0 {
-		return errInvalidLength
-	}
-
-	n := uint(length)
-	b := make([]byte, 0, MaxLengthBytes)
-
-	for i := uint(MaxLengthBytes - 1); i > 0; i-- {
-		x := pow(128, i)
-		if n >= x {
-			v := byte(n>>(7*i) | 0x80)
-			b = append(b, v)
-		}
-	}
-	b = append(b, byte(n&0x7f))
-
-	_, err := w.Write(b)
-	if err != nil {
-		return fmt.Errorf("could not write to buffer: %v", err)
-	}
-	return nil
-}
-
-func EncodeLengthNoLoop(length int, w io.Writer) error {
-	if length < 0 {
-		return errInvalidLength
-	}
-
-	n := uint(length)
-	b := make([]byte, 0, 5)
-
-	if n >= 268435456 {
-		b = append(b, byte(n>>28|0x80))
-	}
-	if n >= 2097152 {
-		b = append(b, byte(n>>21|0x80))
-	}
-	if n >= 16384 {
-		b = append(b, byte(n>>14|0x80))
-	}
-	if n >= 128 {
-		b = append(b, byte(n>>7|0x80))
-	}
-	b = append(b, byte(n&0x7f))
-
-	_, err := w.Write(b)
-	if err != nil {
-		return fmt.Errorf("could not write to buffer: %v", err)
-	}
-	return nil
-}
-
-func EncodeLengthNoAppend(length int, w io.Writer) error {
-	if length < 0 {
-		return errInvalidLength
-	}
-
-	n := uint(length)
-	b := []byte{
-		byte(n>>28 | 0x80),
-		byte(n>>21 | 0x80),
-		byte(n>>14 | 0x80),
-		byte(n>>7 | 0x80),
-		byte(n & 0x7f),
-	}
-
-	var i int
-	if n >= 268435456 {
-		i = 0
-	} else if n >= 2097152 {
-		i = 1
-	} else if n >= 16384 {
-		i = 2
-	} else if n >= 128 {
-		i = 3
-	} else {
-		i = 4
-	}
-
-	_, err := w.Write(b[i:])
-	if err != nil {
-		return fmt.Errorf("could not write to buffer: %v", err)
-	}
-	return nil
-}
 
 func TestEncodeDecode(t *testing.T) {
 	tests := []struct {
@@ -156,6 +69,85 @@ func TestNilWriter(t *testing.T) {
 	}
 }
 
+func TestTooManyLengthBytes(t *testing.T) {
+	buf := &bytes.Buffer{}
+	for i := 0; i <= MaxLengthBytes+1; i++ {
+		buf.WriteByte(0x80)
+	}
+	_, err := DecodeStringLength(buf)
+	if err != errTooLong {
+		t.Fatalf("expected errTooLong, got: %v", err)
+	}
+}
+
+func TestServiceEncode(t *testing.T) {
+	s := Service{
+		Type:     "dummytype",
+		USN:      strings.Repeat("1", 128),
+		Server:   "dummy 1.0",
+		Location: "http://127.0.0.1/setup.xml",
+	}
+
+	expect := make([]byte, 0)
+	expect = append(expect, byte(len(s.Type)))
+	expect = append(expect, s.Type...)
+
+	// USN needs 2 bytes for length of 128
+	usnLen := []byte{0x81, byte(len(s.USN)) & 0x7f}
+	expect = append(expect, usnLen...)
+	expect = append(expect, s.USN...)
+
+	expect = append(expect, byte(len(s.Server)))
+	expect = append(expect, s.Server...)
+	expect = append(expect, byte(len(s.Location)))
+	expect = append(expect, s.Location...)
+
+	buf := &bytes.Buffer{}
+	b, err := s.EncodeTo(buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if b != len(expect) {
+		t.Fatalf("expected %d bytes, got %d", len(expect), b)
+	}
+
+	out := buf.Bytes()
+	if !reflect.DeepEqual(out, expect) {
+		t.Logf("expected: %v\n", expect)
+		t.Logf("     got: %v\n", out)
+		t.Fatal("mismatched bytes after encode")
+	}
+}
+
+func TestDecodeServices(t *testing.T) {
+
+	stream := []byte{
+		0x03,
+		0x15, 0x68, 0x74, 0x74, 0x70, 0x3a, 0x2f, 0x2f, 0x31, 0x32, 0x37, 0x2e, 0x30, 0x2e, 0x30, 0x2e, 0x31, 0x3a, 0x38, 0x30, 0x30, 0x31, 0x1d, 0x75, 0x72, 0x6e, 0x3a, 0x54, 0x79, 0x70, 0x65, 0x31, 0x3a, 0x64, 0x65, 0x76, 0x69, 0x63, 0x65, 0x3a, 0x63, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x6c, 0x65, 0x65, 0x3a, 0x31, 0x18, 0x75, 0x75, 0x69, 0x64, 0x3a, 0x30, 0x30, 0x30, 0x30, 0x2d, 0x30, 0x30, 0x30, 0x30, 0x2d, 0x30, 0x30, 0x30, 0x30, 0x2d, 0x30, 0x30, 0x30, 0x31,
+		0x15, 0x68, 0x74, 0x74, 0x70, 0x3a, 0x2f, 0x2f, 0x31, 0x32, 0x37, 0x2e, 0x30, 0x2e, 0x30, 0x2e, 0x31, 0x3a, 0x38, 0x30, 0x30, 0x32, 0x1d, 0x75, 0x72, 0x6e, 0x3a, 0x54, 0x79, 0x70, 0x65, 0x32, 0x3a, 0x64, 0x65, 0x76, 0x69, 0x63, 0x65, 0x3a, 0x63, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x6c, 0x65, 0x65, 0x3a, 0x31, 0x18, 0x75, 0x75, 0x69, 0x64, 0x3a, 0x30, 0x30, 0x30, 0x30, 0x2d, 0x30, 0x30, 0x30, 0x30, 0x2d, 0x30, 0x30, 0x30, 0x30, 0x2d, 0x30, 0x30, 0x30, 0x32,
+		0x15, 0x68, 0x74, 0x74, 0x70, 0x3a, 0x2f, 0x2f, 0x31, 0x32, 0x37, 0x2e, 0x30, 0x2e, 0x30, 0x2e, 0x31, 0x3a, 0x38, 0x30, 0x30, 0x33, 0x1d, 0x75, 0x72, 0x6e, 0x3a, 0x54, 0x79, 0x70, 0x65, 0x33, 0x3a, 0x64, 0x65, 0x76, 0x69, 0x63, 0x65, 0x3a, 0x63, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x6c, 0x65, 0x65, 0x3a, 0x31, 0x18, 0x75, 0x75, 0x69, 0x64, 0x3a, 0x30, 0x30, 0x30, 0x30, 0x2d, 0x30, 0x30, 0x30, 0x30, 0x2d, 0x30, 0x30, 0x30, 0x30, 0x2d, 0x30, 0x30, 0x30, 0x33,
+	}
+
+	expect := []Service{
+		{"urn:Type1:device:controllee:1", "uuid:0000-0000-0000-0001", "", "http://127.0.0.1:8001"},
+		{"urn:Type2:device:controllee:1", "uuid:0000-0000-0000-0002", "", "http://127.0.0.1:8002"},
+		{"urn:Type3:device:controllee:1", "uuid:0000-0000-0000-0003", "", "http://127.0.0.1:8003"},
+	}
+
+	buf := bytes.NewReader(stream)
+	out, err := decodeServices(buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(out, expect) {
+		t.Logf("expected: %v\n", expect)
+		t.Logf("     got: %v\n", out)
+		t.Fatal("mismatched services after decode")
+	}
+}
+
 func BenchmarkEncodeShort(b *testing.B) {
 	bb := make([]byte, 1)
 	buf := bytes.NewBuffer(bb)
@@ -174,78 +166,6 @@ func BenchmarkEncodeLong(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		err := EncodeStringLength(268435456, buf)
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkEncodeReverseShort(b *testing.B) {
-	bb := make([]byte, 1)
-	buf := bytes.NewBuffer(bb)
-
-	for i := 0; i < b.N; i++ {
-		err := EncodeLengthReverse(0, buf)
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkEncodeReverseLong(b *testing.B) {
-	bb := make([]byte, 5)
-	buf := bytes.NewBuffer(bb)
-
-	for i := 0; i < b.N; i++ {
-		err := EncodeLengthReverse(268435456, buf)
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkEncodeNoLoopShort(b *testing.B) {
-	bb := make([]byte, 1)
-	buf := bytes.NewBuffer(bb)
-
-	for i := 0; i < b.N; i++ {
-		err := EncodeLengthNoLoop(0, buf)
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkEncodeNoLoopLong(b *testing.B) {
-	bb := make([]byte, 5)
-	buf := bytes.NewBuffer(bb)
-
-	for i := 0; i < b.N; i++ {
-		err := EncodeLengthNoLoop(268435456, buf)
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkEncodeNoAppendShort(b *testing.B) {
-	bb := make([]byte, 1)
-	buf := bytes.NewBuffer(bb)
-
-	for i := 0; i < b.N; i++ {
-		err := EncodeLengthNoAppend(0, buf)
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func BenchmarkEncodeNoAppendLong(b *testing.B) {
-	bb := make([]byte, 5)
-	buf := bytes.NewBuffer(bb)
-
-	for i := 0; i < b.N; i++ {
-		err := EncodeLengthNoAppend(268435456, buf)
 		if err != nil {
 			b.Fatal(err)
 		}

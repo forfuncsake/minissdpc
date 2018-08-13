@@ -78,14 +78,8 @@ func (c *Client) WriteString(s string) (int, error) {
 // RegisterService will register a new service to be advertised
 // by minissdpd
 func (c *Client) RegisterService(s Service) error {
-	err := c.Connect()
-	if err != nil {
-		return err
-	}
-	defer c.Close()
-
 	b := bytes.NewBuffer([]byte{RequestTypeRegister})
-	_, err = s.EncodeTo(b)
+	_, err := s.EncodeTo(b)
 	if err != nil {
 		return fmt.Errorf("could not encode service: %v", err)
 	}
@@ -97,14 +91,8 @@ func (c *Client) RegisterService(s Service) error {
 // GetServicesAll will query the minissdpd server for all services
 // currently under advertisement
 func (c *Client) GetServicesAll() ([]Service, error) {
-	err := c.Connect()
-	if err != nil {
-		return nil, err
-	}
-	defer c.Close()
-
 	// Send the request on the socket
-	_, err = c.Write([]byte{RequestTypeAll, 1, 0})
+	_, err := c.Write([]byte{RequestTypeAll, 1, 0})
 	if err != nil {
 		return nil, fmt.Errorf("could not send request: %v", err)
 	}
@@ -116,13 +104,7 @@ func (c *Client) GetServicesAll() ([]Service, error) {
 // GetServicesByUSN will query the minissdpd server for all services
 // under advertisement that match the given USN string
 func (c *Client) GetServicesByUSN(t string) ([]Service, error) {
-	err := c.Connect()
-	if err != nil {
-		return nil, err
-	}
-	defer c.Close()
-
-	_, err = c.Write([]byte{RequestTypeByUSN})
+	_, err := c.Write([]byte{RequestTypeByUSN})
 	if err != nil {
 		return nil, fmt.Errorf("could not start request: %v", err)
 	}
