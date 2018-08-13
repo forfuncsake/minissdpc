@@ -121,6 +121,14 @@ func TestServiceEncode(t *testing.T) {
 }
 
 func TestDecodeServices(t *testing.T) {
+	buf := bytes.NewReader([]byte{0})
+	out, err := decodeServices(buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out) != 0 {
+		t.Fatalf("%d unexpected services decoded", len(out))
+	}
 
 	stream := []byte{
 		0x03,
@@ -135,8 +143,8 @@ func TestDecodeServices(t *testing.T) {
 		{"urn:Type3:device:controllee:1", "uuid:0000-0000-0000-0003", "", "http://127.0.0.1:8003"},
 	}
 
-	buf := bytes.NewReader(stream)
-	out, err := decodeServices(buf)
+	buf = bytes.NewReader(stream)
+	out, err = decodeServices(buf)
 	if err != nil {
 		t.Fatal(err)
 	}

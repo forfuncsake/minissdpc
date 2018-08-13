@@ -121,13 +121,7 @@ func (c *Client) GetServicesByUSN(t string) ([]Service, error) {
 // GetServicesByType will query the minissdpd server for all services
 // under advertisement that match the given type string
 func (c *Client) GetServicesByType(t string) ([]Service, error) {
-	err := c.Connect()
-	if err != nil {
-		return nil, err
-	}
-	defer c.Close()
-
-	_, err = c.Write([]byte{RequestTypeByType})
+	_, err := c.Write([]byte{RequestTypeByType})
 	if err != nil {
 		return nil, fmt.Errorf("could not start request: %v", err)
 	}
