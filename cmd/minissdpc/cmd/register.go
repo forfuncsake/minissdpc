@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/forfuncsake/minissdpd"
+	"github.com/forfuncsake/minissdpc"
 	"github.com/spf13/cobra"
 )
 
@@ -43,7 +43,7 @@ var registerCmd = &cobra.Command{
 		}
 		defer client.Close()
 
-		err = client.RegisterService(minissdpd.Service{
+		err = client.RegisterService(minissdpc.Service{
 			Type:     regType,
 			USN:      regUSN,
 			Server:   regServer,

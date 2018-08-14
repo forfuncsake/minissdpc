@@ -1,4 +1,4 @@
-// Package minissdpd provides an interface to interact with
+// Package minissdpc provides an interface to interact with
 // a running instance of minissdpd via its UNIX socket.
 // It allows a go application to advertise it's service over
 // SSDP when UDP Port 1900 is already in use by minissdpd, or
@@ -23,4 +23,4 @@
 //             if(n>=16384) *(p++) = (n >> 14) | 0x80; \
 //             if(n>=128) *(p++) = (n >> 7) | 0x80; \
 //             *(p++) = n & 0x7f;
-package minissdpd
+package minissdpc

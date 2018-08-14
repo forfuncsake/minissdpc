@@ -15,7 +15,7 @@
 package main
 
 import (
-	"github.com/forfuncsake/minissdpd/cmd/minissdpc/cmd"
+	"github.com/forfuncsake/minissdpc/cmd/minissdpc/cmd"
 )
 
 func main() {

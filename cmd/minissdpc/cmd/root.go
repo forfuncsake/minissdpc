@@ -18,16 +18,16 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/forfuncsake/minissdpd"
+	"github.com/forfuncsake/minissdpc"
 	"github.com/spf13/cobra"
 )
 
 var socket string
-var client *minissdpd.Client
+var client *minissdpc.Client
 
 func initClient() {
 	if client == nil {
-		client = &minissdpd.Client{
+		client = &minissdpc.Client{
 			SocketPath: socket,
 		}
 	}
@@ -49,10 +49,10 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&socket, "socket", minissdpd.DefaultSocket, "minissdpd's unix socket `path`")
+	rootCmd.PersistentFlags().StringVar(&socket, "socket", minissdpc.DefaultSocket, "minissdpd's unix socket `path`")
 }
 
-func printServices(services []minissdpd.Service) {
+func printServices(services []minissdpc.Service) {
 	if len(services) == 0 {
 		fmt.Println("No matching services returned")
 		return

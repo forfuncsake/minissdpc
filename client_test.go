@@ -1,4 +1,4 @@
-package minissdpd
+package minissdpc
 
 import (
 	"io/ioutil"

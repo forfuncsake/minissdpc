@@ -1,11 +1,11 @@
-# minissdpd
+# minissdpc
 Client package for communicating with minissdpd over it's Unix socket
 
 # Usage
-Examples of package usage can be found in the `minissdpc` client application (https://github.com/forfuncsake/minissdpd/tree/master/cmd/minissdpc).
+Examples of package usage can be found in the `minissdpc` client application (https://github.com/forfuncsake/minissdpc/tree/master/cmd/minissdpc).
 
 # Documentation
-godoc can be found here: https://godoc.org/github.com/forfuncsake/minissdpd
+godoc can be found here: https://godoc.org/github.com/forfuncsake/minissdpc
 
 # Why?
 I wanted to run some mock devices (for home automation) on my synology using the Belkin Wemo protocol, but UDP port 1900 was already in use.
@@ -16,4 +16,4 @@ Feedback, Issues and PRs are all welcome!
 
 
 
-[![Build Status](https://travis-ci.org/forfuncsake/minissdpd.svg?branch=master)](https://travis-ci.org/forfuncsake/minissdpd)
+[![Build Status](https://travis-ci.org/forfuncsake/minissdpc.svg?branch=master)](https://travis-ci.org/forfuncsake/minissdpc)  [![Go Report Card](https://goreportcard.com/badge/github.com/forfuncsake/minissdpc)](https://goreportcard.com/report/github.com/forfuncsake/minissdpc)
